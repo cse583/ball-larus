@@ -1,0 +1,1 @@
+add_llvm_pass_plugin(BallLarusPass ball_larus_pass.cpp)
