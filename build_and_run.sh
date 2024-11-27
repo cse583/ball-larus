@@ -33,3 +33,7 @@ mkdir "$BASENAME"
 mv *.txt "$BASENAME"
 mv "$BASENAME/CMakeCache.txt" .
 mv "instrumented_$BASENAME" "$BASENAME"
+
+# Run regen to output the csv files
+echo "Running regen to write csv files..."
+regen/regen $BASENAME

@@ -1,0 +1,2 @@
+add_executable(regen regen.cpp)
+target_compile_features(BallLarusRuntime PRIVATE cxx_std_17)

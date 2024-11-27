@@ -9,3 +9,4 @@ include_directories(${LLVM_INCLUDE_DIRS})
 
 add_subdirectory(ball_larus)
 add_subdirectory(ball_larus/runtime)
+add_subdirectory(regen)

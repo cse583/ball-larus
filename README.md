@@ -47,4 +47,5 @@ Function Name: {FuncName}
 {PathId}: {Count}
 ...
 ```
-
+- {FunctionName}.csv
+    - each record: {string of IR instructions of the path (Instructions seperated by one newline and basic blocks separated by 2)}, {whether it is hot path}
