@@ -190,18 +190,36 @@ public:
         
         // Instrument normal edge
         for (auto& node : nodes) {
+            BasicBlock* src = node.bb;
             for (auto& to : node.tos) {
                 if (to.inc > 0 && to.be == nullptr) {
-                    BasicBlock* src = node.bb;
                     BasicBlock* dest = nodes[to.next].bb;
                     BasicBlock* newbb = BasicBlock::Create(Context, "increment", &F);
-                    src->getTerminator()->replaceSuccessorWith(dest, newbb);
-                    Builder.SetInsertPoint(newbb);
 
+                    // Update PHI nodes - we need to remember the original incoming value
+                    std::vector<PHINode*> phis;
+                    for (auto& inst : *dest) {
+                        if (auto phi = dyn_cast<PHINode>(&inst)) {
+                            phis.push_back(phi);
+                        }
+                    }
+
+                    // Redirect the terminator
+                    src->getTerminator()->replaceSuccessorWith(dest, newbb);
+
+                    // Add increment instruction to new block
+                    Builder.SetInsertPoint(newbb);
                     Value* currentPath = Builder.CreateLoad(Int64Ty, PathRegister);
                     Value *incrementedPath = Builder.CreateAdd(currentPath, ConstantInt::get(Int64Ty, to.inc));
                     Builder.CreateStore(incrementedPath, PathRegister);
                     Builder.CreateBr(dest);
+
+                    // Update PHI nodes in destination
+                    for (auto phi : phis) {
+                        Value* incomingValue = phi->getIncomingValueForBlock(src);
+                        phi->removeIncomingValue(src);
+                        phi->addIncoming(incomingValue, newbb);
+                    }
                 }
             }
         }
@@ -211,14 +229,31 @@ public:
             BasicBlock* src = be.src;
             BasicBlock* dest = be.dest; 
             BasicBlock* newbb = BasicBlock::Create(Context, "increment_reset", &F);
-            src->getTerminator()->replaceSuccessorWith(dest, newbb);
-            Builder.SetInsertPoint(newbb);
 
+            // Update PHI nodes for backedges
+            std::vector<PHINode*> phis;
+            for (auto& inst : *dest) {
+                if (auto phi = dyn_cast<PHINode>(&inst)) {
+                    phis.push_back(phi);
+                }
+            }
+
+            src->getTerminator()->replaceSuccessorWith(dest, newbb);
+            
+            Builder.SetInsertPoint(newbb);
             Value* currentPath = Builder.CreateLoad(Int64Ty, PathRegister);
             Value *incrementedPath = Builder.CreateAdd(currentPath, ConstantInt::get(Int64Ty, be.backedge_inc));
             Builder.CreateStore(incrementedPath, PathRegister);
             Builder.CreateCall(IncrementPathCountFunc, {FuncName, incrementedPath});
+            Builder.CreateStore(ConstantInt::get(Int64Ty, be.backedge_reset), PathRegister);
             Builder.CreateBr(dest);
+
+            // Update PHI nodes in destination
+            for (auto phi : phis) {
+                Value* incomingValue = phi->getIncomingValueForBlock(src);
+                phi->removeIncomingValue(src);
+                phi->addIncoming(incomingValue, newbb);
+            }
         }
         
         // Add final path count increment at exit block
