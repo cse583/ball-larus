@@ -149,7 +149,7 @@ private:
         }
         stream << "\"";
         bool isHotPath = cnt >= hot_path_threshold;
-        stream << ',' << isHotPath << '\n';
+        stream << ',' << cnt << '\n';
         currColdPaths += !isHotPath;
     }
 };
